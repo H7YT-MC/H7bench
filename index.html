@@ -1,40 +1,43 @@
+
 <!DOCTYPE html>
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>H7benchmark</title>
+    <title>H7benchmark - Infinite Reflection Edition</title>
     <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #ffffff; font-family: monospace; color: #111; }
-        #ui { position: absolute; top: 20px; left: 20px; background: rgba(255, 255, 255, 0.95); padding: 20px; border-radius: 12px; border: 1px solid #ccc; pointer-events: none; z-index: 10; box-shadow: 0 4px 30px rgba(0,0,0,0.15); width: 310px; }
-        h1 { margin: 0 0 10px 0; font-size: 1.3rem; color: #ff0055; text-shadow: 0 0 5px rgba(255,0,85,0.2); letter-spacing: 1px; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #5599ee; font-family: monospace; color: #fff; }
+        #ui { position: absolute; top: 20px; left: 20px; background: rgba(5, 10, 25, 0.9); padding: 20px; border-radius: 12px; border: 1px solid #00ffcc; pointer-events: none; z-index: 10; box-shadow: 0 4px 30px rgba(0,255,204,0.2); width: 310px; backdrop-filter: blur(8px); }
+        h1 { margin: 0 0 5px 0; font-size: 1.3rem; color: #00ffcc; text-shadow: 0 0 8px rgba(0,255,204,0.6); letter-spacing: 1px; }
+        .sub-title { font-size: 0.75rem; color: #88ccff; margin-bottom: 10px; }
         .stat-box { display: flex; gap: 20px; margin: 10px 0; }
         .stat { font-size: 1.8rem; font-weight: bold; }
         
-        #rating-box { margin: 12px 0 5px 0; padding: 10px; background: #f0f0f5; border-radius: 8px; border-left: 5px solid #ff0055; }
-        #rating-title { font-size: 0.8rem; color: #666; font-weight: bold; }
-        #rating-txt { font-size: 1.1rem; font-weight: bold; color: #ff0055; margin-top: 2px; }
+        #rating-box { margin: 12px 0 5px 0; padding: 10px; background: rgba(255,255,255,0.06); border-radius: 8px; border-left: 5px solid #00ffcc; }
+        #rating-title { font-size: 0.8rem; color: #b0c0d0; font-weight: bold; }
+        #rating-txt { font-size: 1.1rem; font-weight: bold; color: #00ffcc; margin-top: 2px; }
 
-        #credit { font-size: 0.85rem; color: #777; margin-top: 12px; border-top: 1px dashed #ccc; padding-top: 8px; text-align: right; }
-        #log { margin-top: 12px; color: #d32f2f; font-size: 0.95rem; font-weight: bold; line-height: 1.4; border-top: 1px solid #eee; padding-top: 10px; }
+        #credit { font-size: 0.85rem; color: #6688aa; margin-top: 12px; border-top: 1px dashed #334455; padding-top: 8px; text-align: right; }
+        #log { margin-top: 12px; color: #ff3366; font-size: 0.95rem; font-weight: bold; line-height: 1.4; border-top: 1px solid #223344; padding-top: 10px; }
     </style>
 </head>
 <body>
 
     <div id="ui">
         <h1>H7benchmark</h1>
+        <div class="sub-title">All-Block Infinite Reflection</div>
         <div class="stat-box">
-            <div>FPS<br><span id="fps" class="stat" style="color:#ff0055;">--</span></div>
-            <div>OBJECTS<br><span id="objects" class="stat">0</span></div>
+            <div>FPS<br><span id="fps" class="stat" style="color:#00ffcc;">--</span></div>
+            <div>BLOCKS<br><span id="objects" class="stat">0</span></div>
         </div>
         
         <div id="rating-box">
             <div id="rating-title">💻 現在のPC快適度クラス</div>
-            <div id="rating-txt">起動中...</div>
+            <div id="rating-txt">鏡面世界を構築中...</div>
         </div>
 
         <div id="credit">🔗 h7yt.pages.dev</div>
 
-        <div id="log">⌛ エンジン初期化中...</div>
+        <div id="log">⌛ チャンク読み込み中...</div>
     </div>
 
     <script type="importmap">
@@ -49,11 +52,8 @@
         import * as THREE from 'three';
 
         const CONFIG = {
-            START_COUNT: 15,       
-            GROWTH_RATE: 0.08,     
-            BASE_ADD: 15,
             SHADOW_MAP_SIZE: 4096, 
-            AREA_SIZE: 130,
+            BLOCK_ADD_SPEED: 130, // さらに高速にブロックを流し込んで即死を狙う
         };
 
         const ui = {
@@ -63,20 +63,19 @@
             log: document.getElementById('log')
         };
 
-        // 🎰 4K・リアルタイム反射環境に最適化した13段階レーティング
         const RATING_STAGES = [
-            { limit: 5,    text: "💥 動作しない", color: "#424242" },
-            { limit: 50,   text: "🚨 超最悪スペック", color: "#8b0000" },
-            { limit: 150,  text: "🪙 1000円PC？", color: "#b71c1c" },
-            { limit: 350,  text: "🐌 重たい", color: "#c62828" },
-            { limit: 700,  text: "📺 youtube動画くらいなら見れる", color: "#e65100" },
-            { limit: 1200, text: "🎮 ちょっとしたゲームなら遊べる", color: "#f57c00" },
-            { limit: 1800, text: "🟢 普通", color: "#4caf50" },
-            { limit: 2500, text: "⛏️ マイクラ若干動くか？", color: "#2e7d32" },
-            { limit: 3800, text: "🐉 モンハン動く", color: "#00c853" }, 
-            { limit: 4600, text: "✨ サクサク", color: "#00b0ff" },
-            { limit: 5400, text: "⚡ レベチ", color: "#2979ff" }, 
-            { limit: 6500, text: "🌌 未来からの贈り物？", color: "#aa00ff" },
+            { limit: 50,   text: "💥 起動不能レベル", color: "#424242" },
+            { limit: 300,  text: "🚨 超最悪スペック", color: "#8b0000" },
+            { limit: 1000, text: "🪙 1000円PC？", color: "#b71c1c" },
+            { limit: 2500, text: "🐌 重たい", color: "#c62828" },
+            { limit: 5000, text: "📺 youtube動画くらいなら見れる", color: "#e65100" },
+            { limit: 8000, text: "🎮 ちょっとしたゲームなら遊べる", color: "#f57c00" },
+            { limit: 12000,text: "🟢 普通", color: "#4caf50" },
+            { limit: 16000,text: "⛏️ マイクラ若干動くか？", color: "#2e7d32" },
+            { limit: 20000,text: "🐉 モンハン動く", color: "#00c853" }, 
+            { limit: 25000,text: "✨ サクサク", color: "#00b0ff" },
+            { limit: 32000,text: "⚡ レベチ", color: "#2979ff" }, 
+            { limit: 40000,text: "🌌 未来からの贈り物？", color: "#aa00ff" },
             { limit: Infinity, text: "👑 神の領域", color: "#ff007f" }
         ];
 
@@ -92,134 +91,148 @@
         }
 
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0xffffff);
-        scene.fog = new THREE.FogExp2(0xffffff, 0.005);
+        scene.background = new THREE.Color(0x5599ee); 
+        scene.fog = new THREE.FogExp2(0x5599ee, 0.005);
 
-        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(0, 45, 85);
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.5, 1000);
 
         const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        renderer.toneMappingExposure = 1.3; 
+        renderer.toneMappingExposure = 1.2; 
         document.body.appendChild(renderer.domElement);
 
         renderer.shadowMap.enabled = true;
         renderer.shadowMap.type = THREE.VSMShadowMap; 
 
-        const ambientLight = new THREE.AmbientLight(0xe5e5e5);
+        const ambientLight = new THREE.AmbientLight(0xaabbff, 1.5);
         scene.add(ambientLight);
 
-        const light1 = new THREE.SpotLight(0xffffff, 14000, 0, Math.PI / 4, 0.6);
-        light1.position.set(20, 120, 20);
-        light1.castShadow = true;
-        light1.shadow.mapSize.width = CONFIG.SHADOW_MAP_SIZE;
-        light1.shadow.mapSize.height = CONFIG.SHADOW_MAP_SIZE;
-        light1.shadow.camera.near = 40;
-        light1.shadow.camera.far = 200;
-        light1.shadow.bias = -0.0005;
-        light1.shadow.blurSamples = 4; 
-        scene.add(light1);
+        // 太陽光
+        const sunLight = new THREE.DirectionalLight(0xfff8f0, 4.5);
+        sunLight.position.set(-70, 110, -60);
+        sunLight.castShadow = true;
+        sunLight.shadow.mapSize.width = CONFIG.SHADOW_MAP_SIZE;
+        sunLight.shadow.mapSize.height = CONFIG.SHADOW_MAP_SIZE;
+        sunLight.shadow.camera.near = 0.5;
+        sunLight.shadow.camera.far = 400;
+        const d = 160;
+        sunLight.shadow.camera.left = -d;
+        sunLight.shadow.camera.right = d;
+        sunLight.shadow.camera.top = d;
+        sunLight.shadow.camera.bottom = -d;
+        sunLight.shadow.bias = -0.0002;
+        scene.add(sunLight);
 
-        const light2 = new THREE.DirectionalLight(0xffffff, 2);
-        light2.position.set(-60, 70, -30);
-        light2.castShadow = true;
-        light2.shadow.mapSize.width = CONFIG.SHADOW_MAP_SIZE;
-        light2.shadow.mapSize.height = CONFIG.SHADOW_MAP_SIZE;
-        scene.add(light2);
+        // 太陽の球体
+        const sunOrbit = new THREE.Group();
+        const sunGeometry = new THREE.SphereGeometry(14, 16, 16);
+        const sunMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+        const sunMesh = new THREE.Mesh(sunGeometry, sunMaterial);
+        sunMesh.position.copy(sunLight.position).normalize().multiplyScalar(280);
+        sunOrbit.add(sunMesh);
+        scene.add(sunOrbit);
 
-        const ground = new THREE.Mesh(
-            new THREE.PlaneGeometry(900, 900),
-            new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.08, metalness: 0.9 })
-        );
-        ground.rotation.x = -Math.PI / 2;
-        ground.position.y = -20;
-        ground.receiveShadow = true;
-        scene.add(ground);
-
-        const grid = new THREE.GridHelper(900, 45, 0xcccccc, 0xeeeeee);
-        grid.position.y = -19.9;
-        scene.add(grid);
-
-        const cubeRenderTarget = new THREE.WebGLCubeRenderTarget(256, { 
-            generateMipmaps: true,
-            minFilter: THREE.LinearMipmapLinearFilter
-        });
-        const cubeCamera = new THREE.CubeCamera(1, 500, cubeRenderTarget);
-        scene.add(cubeCamera);
-
-        const meshes = [];
-        const initialStates = [];
-        let mirrorBall = null;
-
-        function createHeavyTexture() {
-            const size = 64; 
-            const canvas = document.createElement('canvas'); canvas.width = size; canvas.height = size;
+        // 🌊 波打つ水面用のテクスチャ
+        function createWaveTexture() {
+            const canvas = document.createElement('canvas'); canvas.width = 128; canvas.height = 128;
             const ctx = canvas.getContext('2d');
-            const imgData = ctx.createImageData(size, size);
-            for (let i = 0; i < imgData.data.length; i += 4) {
-                const v = Math.random() * 255;
-                imgData.data[i] = v; imgData.data[i+1] = v; imgData.data[i+2] = v; imgData.data[i+3] = 255;
+            for(let x=0; x<128; x++) {
+                for(let y=0; y<128; y++) {
+                    const nx = Math.sin(x*0.1) * 127 + 128;
+                    const ny = Math.cos(y*0.1) * 127 + 128;
+                    ctx.fillStyle = `rgb(${nx}, ${ny}, 255)`; ctx.fillRect(x, y, 1, 1);
+                }
             }
-            ctx.putImageData(imgData, 0, 0);
-            return new THREE.CanvasTexture(canvas);
+            const tex = new THREE.CanvasTexture(canvas);
+            tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping;
+            tex.repeat.set(20, 20);
+            return tex;
+        }
+        const waveNormalMap = createWaveTexture();
+
+        // 🪞 【心臓部】すべてのオブジェクトが反射を読み込むための環境マップカメラ（512px高解像度）
+        const globalRenderTarget = new THREE.WebGLCubeRenderTarget(512, { 
+            generateMipmaps: true, 
+            minFilter: THREE.LinearMipmapLinearFilter 
+        });
+        const globalCubeCamera = new THREE.CubeCamera(0.1, 1000, globalRenderTarget);
+        scene.add(globalCubeCamera);
+
+        // 水面マテリアル
+        const waterMat = new THREE.MeshStandardMaterial({
+            color: 0x1a657a, roughness: 0.1, metalness: 0.9,
+            normalMap: waveNormalMap, normalScale: new THREE.Vector2(0.2, 0.2),
+            envMap: globalRenderTarget.texture, transparent: true, opacity: 0.8
+        });
+        const waterGeo = new THREE.PlaneGeometry(2000, 2000);
+        const water = new THREE.Mesh(waterGeo, waterMat);
+        water.rotation.x = -Math.PI / 2;
+        water.position.y = -2;
+        water.receiveShadow = true;
+        scene.add(water);
+
+        // 🪞 全ブロック共通マテリアル（すべてに鏡面反射 envMap を強制付与！）
+        const materials = {
+            grass: new THREE.MeshStandardMaterial({ color: 0x559622, roughness: 0.2, metalness: 0.6, envMap: globalRenderTarget.texture }),
+            dirt: new THREE.MeshStandardMaterial({ color: 0x66442b, roughness: 0.4, metalness: 0.5, envMap: globalRenderTarget.texture }),
+            stone: new THREE.MeshStandardMaterial({ color: 0x737373, roughness: 0.1, metalness: 0.8, envMap: globalRenderTarget.texture }),
+            wood: new THREE.MeshStandardMaterial({ color: 0x8c532b, roughness: 0.25, metalness: 0.6, envMap: globalRenderTarget.texture }),
+            leaf: new THREE.MeshStandardMaterial({ color: 0x226611, roughness: 0.15, metalness: 0.7, envMap: globalRenderTarget.texture }),
+        };
+
+        const boxGeo = new THREE.BoxGeometry(1, 1, 1);
+        const blockPositions = [];
+        let totalBlocks = 0;
+
+        function getTerrainHeight(x, z) {
+            return Math.floor((Math.sin(x * 0.04) * Math.cos(z * 0.04) * 8) + (Math.sin(x * 0.08) * 2));
         }
 
-        function createMirrorCore() {
-            const geometry = new THREE.SphereGeometry(10, 32, 32);
-            const material = new THREE.MeshStandardMaterial({
-                color: 0xffffff, metalness: 1.0, roughness: 0.0,
-                envMap: cubeRenderTarget.texture
-            });
-            mirrorBall = new THREE.Mesh(geometry, material);
-            mirrorBall.position.set(0, -5, 0);
-            mirrorBall.castShadow = true;
-            mirrorBall.receiveShadow = true;
-            scene.add(mirrorBall);
-        }
-        createMirrorCore();
-
-        function addObjects(count) {
-            for (let i = 0; i < count; i++) {
-                const geometry = new THREE.IcosahedronGeometry(2, 2);
-                const material = new THREE.MeshStandardMaterial({
-                    color: new THREE.Color(`hsl(${Math.random() * 360}, 95%, 55%)`),
-                    metalness: 0.90, roughness: 0.05,
-                    emissive: new THREE.Color(`hsl(${Math.random() * 360}, 100%, 20%)`),
-                    bumpMap: createHeavyTexture(), bumpScale: 0.03
-                });
-
-                const mesh = new THREE.Mesh(geometry, material);
-                let x = (Math.random() - 0.5) * CONFIG.AREA_SIZE;
-                let y = Math.random() * 35 - 5; 
-                let z = (Math.random() - 0.5) * CONFIG.AREA_SIZE;
+        const range = 80;
+        for (let x = -range; x < range; x++) {
+            for (let z = -range; z < range; z++) {
+                const height = getTerrainHeight(x, z);
+                blockPositions.push({ x, y: height, z, type: height > 3 ? 'stone' : 'grass' });
+                blockPositions.push({ x, y: height - 1, z, type: 'dirt' });
                 
-                if(Math.abs(x) < 15 && Math.abs(z) < 15) { x += 25; z += 25; }
+                if (Math.random() < 0.007 && height > -1) {
+                    for(let h=1; h<=5; h++) blockPositions.push({ x, y: height + h, z, type: 'wood' }); 
+                    for(let lx=-2; lx<=2; lx++) {
+                        for(let lz=-2; lz<=2; lz++) {
+                            if (Math.abs(lx) + Math.abs(lz) < 4) {
+                                blockPositions.push({ x: x+lx, y: height + 5, z: z+lz, type: 'leaf' });
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        blockPositions.sort(() => Math.random() - 0.5);
 
-                mesh.position.set(x, y, z);
+        const activeMeshes = [];
+
+        function generateBlocks(count) {
+            const limit = Math.min(blockPositions.length, totalBlocks + count);
+            for (let i = totalBlocks; i < limit; i++) {
+                const b = blockPositions[i];
+                const mesh = new THREE.Mesh(boxGeo, materials[b.type]);
+                mesh.position.set(b.x, b.y, b.z);
                 mesh.castShadow = true;
                 mesh.receiveShadow = true;
-
                 scene.add(mesh);
-                meshes.push(mesh);
-
-                initialStates.push({
-                    x: x, y: y, z: z,
-                    speed: 0.5 + Math.random() * 1.3,
-                    phase: Math.random() * Math.PI * 2 
-                });
+                activeMeshes.push(mesh);
             }
-            ui.objects.textContent = meshes.length;
-            updateRating(meshes.length); 
+            totalBlocks = activeMeshes.length;
+            ui.objects.textContent = totalBlocks;
+            updateRating(totalBlocks);
         }
 
         let lastTime = performance.now();
-        let lastIncrementTime = performance.now();
         let frameCount = 0;
         let time = 0;
         let isFinished = false;
-        let isWarmUp = true;
 
         function animate() {
             if (isFinished) return;
@@ -229,44 +242,28 @@
             const delta = (now - lastTime) / 1000;
             time += delta;
 
-            if (time > 1.2) {
-                if (isWarmUp) {
-                    isWarmUp = false;
-                    addObjects(CONFIG.START_COUNT);
-                    lastIncrementTime = now;
-                }
-                
-                if (now - lastIncrementTime >= 1000) {
-                    const toAdd = Math.floor(meshes.length * CONFIG.GROWTH_RATE) + CONFIG.BASE_ADD;
-                    addObjects(toAdd);
-                    lastIncrementTime = now;
-                    ui.log.textContent = "📈 負荷増大中...";
-                }
+            if (!isFinished && totalBlocks < blockPositions.length) {
+                generateBlocks(CONFIG.BLOCK_ADD_SPEED);
+                ui.log.textContent = "💎 全ブロックの鏡面反射を動的計算中...";
             }
 
-            for (let i = 0; i < meshes.length; i++) {
-                const mesh = meshes[i];
-                const state = initialStates[i];
-                mesh.position.y = state.y + Math.sin(time * state.speed + state.phase) * 18;
-                mesh.position.x = state.x + Math.sin(time * 0.2 * state.speed + state.phase) * 6;
-                mesh.position.z = state.z + Math.cos(time * 0.2 * state.speed + state.phase) * 6;
-                mesh.rotation.x += 0.01; mesh.rotation.y += 0.015;
+            if(waveNormalMap) {
+                waveNormalMap.offset.x = time * 0.02;
+                waveNormalMap.offset.y = time * 0.025;
             }
 
-            if(mirrorBall) {
-                mirrorBall.position.y = -5 + Math.sin(time * 0.4) * 4;
-                mirrorBall.rotation.y -= 0.003;
-            }
-
-            camera.position.x = 105 * Math.sin(time * 0.03);
-            camera.position.z = 105 * Math.cos(time * 0.03);
+            // カメラワーク
+            const radius = 60 + Math.sin(time * 0.05) * 8;
+            camera.position.x = radius * Math.sin(time * 0.06);
+            camera.position.z = radius * Math.cos(time * 0.06);
+            camera.position.y = 8 + Math.sin(time * 0.15) * 4;
             camera.lookAt(0, 0, 0);
 
-            if (mirrorBall && meshes.length > 0) {
-                mirrorBall.visible = false;
-                cubeCamera.position.copy(mirrorBall.position);
-                cubeCamera.update(renderer, scene); 
-                mirrorBall.visible = true;
+            // 🪞 すべてのブロックに反射を適用するため、カメラ位置を連動させて環境マップを更新
+            if (totalBlocks > 0) {
+                // 水面と全ブロックのメッシュを一時的に隠さずに、そのまま全空間を多重書き込み
+                globalCubeCamera.position.copy(camera.position);
+                globalCubeCamera.update(renderer, scene);
             }
 
             renderer.render(scene, camera);
@@ -275,18 +272,18 @@
             if (now - lastTime >= 500) {
                 const fps = Math.round((frameCount * 1000) / (now - lastTime));
                 ui.fps.textContent = fps ? fps : "--";
-                ui.fps.style.color = fps >= 45 ? '#ff0055' : fps >= 15 ? '#ffa000' : '#d32f2f';
+                ui.fps.style.color = fps >= 45 ? '#00ffcc' : fps >= 15 ? '#ffa000' : '#ff5555';
 
-                if (fps > 0 && fps < 5 && time > 4) {
+                if (fps > 0 && fps < 5 && time > 3) {
                     isFinished = true;
                     let finalRating = "判定不能";
                     for (const stage of RATING_STAGES) {
-                        if (meshes.length <= stage.limit) {
+                        if (totalBlocks <= stage.limit) {
                             finalRating = stage.text;
                             break;
                         }
                     }
-                    ui.log.innerHTML = `🛑 BENCHMARK STOPPED<br><br>【最終スコア】<br>オブジェクト数: <span style="color:#ff0055; font-size:1.4rem;">${meshes.length}</span><br>PC快適度: <br><span style="font-size:1.1rem; color:#0076ff;">${finalRating}</span>`;
+                    ui.log.innerHTML = `🛑 BENCHMARK STOPPED<br><br>【最終スコア】<br>無限反射ブロック数: <span style="color:#00ffcc; font-size:1.4rem;">${totalBlocks}</span><br>PC快適度: <br><span style="font-size:1.1rem; color:#00b0ff;">${finalRating}</span>`;
                     return;
                 }
 
